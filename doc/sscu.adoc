@@ -1,0 +1,78 @@
+= Safety and Security Control Unit (SSCU)
+
+== Introduction
+
+The Safety and Security Control Unit (SSCU) is a centralized error-management block for safety-critical RISC-V systems. It collects error indications from safety nodes, groups them according to their severity or handling requirements, and reports significant conditions to the processor by triggering dedicated traps.
+
+The SSCU does not detect or correct faults itself. Instead, it provides a common reporting and escalation interface for independent safety nodes distributed across the system. It is intended for tight integration with a RISC-V core, where Control and Status Registers (CSRs) provide the software interface and group alarms can be connected to processor traps or external fault-signaling logic.
+
+== Purpose and Scope
+
+The SSCU manages two classes of node indications:
+
+* *Corrected errors* indicate that a node detected an error and prevented the error from propagating. Repeated corrected errors are accumulated and reported when the implemented occurrence threshold is reached.
+* *Uncorrected errors* indicate that a node detected an error that was not corrected locally. These errors are reported immediately because the affected state may propagate or require processor intervention.
+
+The unit is organized as independent error groups. All groups are independent of each other and each one groups together a set of related nodes. Groups are responsible to request a dedicated processor trap each time a new error is detected and other related condition hold true. Each group also maintains the diagnostic state of its nodes, generates a prioritized alarm encoding, to allow the software to quickly identify the type of eror for wich the trap was triggered. Separating nodes into groups allows software to associate different alarm sources with different handlers and to keep diagnosis local to the relevant group.
+
+== Architecture
+
+The top-level SSCU contains a clocked reset domain and two group-process units. Each group-process unit receives corrected and uncorrected node indications together with the current value of its software-visible CSR. It returns the next CSR value, a CSR hardware-write enable, and a trap-trigger output.
+
+The operation of a group-process unit is shown conceptually in **INSERT IMAGE** and follows this sequence:
+
+. The corrected and uncorrected node indications enter the group process and sets the corresponding bit in the respective CSR. The current CSR node bits also act as a report-control mask: a node whose corresponding bit is already set is not reported again until software clears or otherwise re-enables that status. 
+. The masked corrected and uncorrected indications are reduced to determine whether a new event is present. The selected node bits are retained for diagnostic readback.
+. Corrected and uncorrected indications are counted independently. An uncorrected indication is eligible for immediate reporting, while a corrected indication contributes to the corrected-error occurrence count. When the relevant counter reaches its overflow condition, the group generates an overflow alarm.
+. The alarm conditions are passed to a priority encoder. An uncorrected overflow node error has the highest priority. If no uncorrected node error is active, an uncorrected-error overflow is reported before a corrected-error overflow.
+. The resulting two-bit alarm encoding is concatenated with the node-status portion of the CSR. The group writes this value back through the hardware CSR interface and asserts the trap output whenever the encoding is nonzero.
+
+The alarm encoding is:
+
+[cols="1,1,1,1",options="header"]
+|===
+|Uncorrected error |Uncorrected overflow |Corrected overflow |Encoding
+
+|0 |0 |0 |00
+|0 |0 |1 |01
+|1 |0 |X |10
+|1 |1 |X |11
+|===
+
+Here, `X` denotes a don't-care condition because an active uncorrected error takes priority. The encoding is stored in CSR bits `[31:30]`.
+
+The group-process architecture therefore has three externally visible effects:
+
+* a trap request for the corresponding group;
+* a hardware CSR write enable; and
+* hardware CSR write data containing both the alarm encoding and the node information needed for diagnosis.
+
+The processor or system-level exception unit can connect each group trap output to a dedicated trap input.
+
+== Interfaces
+
+The top-level SSCU interface is synchronous and consists of a clock, reset, node inputs, CSR connections for each group, and group trap outputs.
+
+[cols="2,1,3",options="header"]
+|===
+|Signal |Direction |Description
+
+|`clk` |Input |System clock.
+|`rst_pin` |Input |Active-high reset for the SSCU state and counters.
+|`trap1_corrected_error` |Input |Input to indicate corrected error node 1 for group 1.
+|`trap1_uncorrected_error[1:0]` |Input |Input to indicate uncorrected error nodes 1 and 2 for group 1. 
+|`trap2_corrected_error[1:0]` |Input |Input to indicate corrected error node 1 and 2for group 2.
+|`trap2_uncorrected_error[1:0]` |Input |Input to indicate uncorrected error nodes 1 and 2 for group 2.
+|`ig_EU_CSR_MU_trap1_trap1_rd_data_out_out_out_in` |Input |Current 32-bit CSR value read for group 1.
+|`trap1_group_process_csr_hw_wr_out_out` |Output |Next 32-bit CSR value generated for group 1.
+|`trap1_group_process_csr_hw_en_out_out` |Output |Hardware CSR write enable for group 1.
+|`trap1_group_process_trap1_trap_trigger_out` |Output |Group 1 trap request.
+|`ig_EU_CSR_MU_trap2_trap2_rd_data_out_out_out_in` |Input |Current 32-bit CSR value read for group 2.
+|`trap2_group_process_csr_hw_wr_out_out` |Output |Next 32-bit CSR value generated for group 2.
+|`trap2_group_process_csr_hw_en_out_out` |Output |Hardware CSR write enable for group 2.
+|`trap2_group_process_trap2_trap_trigger_out` |Output |Group 2 trap request.
+|===
+
+The two CSR read inputs are supplied by the core's CSR implementation. The corresponding hardware-write data and enable signals allow the SSCU to update the group CSR when an alarm is generated. Software can diagnose an alarm by identifying the group whose trap was taken, reading that group's CSR, examining the alarm encoding in bits `[31:30]`, and locating the cleared or newly asserted node-status bit in bits `[29:0]`.
+
+The integration-specific CSR addresses and trap numbers are assigned by the target RISC-V core. The core must therefore provide a CSR path capable of accepting hardware updates from the SSCU and an exception or interrupt path capable of receiving the group trap outputs.
