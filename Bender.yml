@@ -1,0 +1,25 @@
+# A more detailed description of the manifest format `Bender.yml` can be found here:
+# https://github.com/pulp-platform/bender#manifest-format-benderyml
+
+package:
+  name: safety-security-control-unit-ip
+  authors:
+    - "Ares Tahiraga <ares.tahiraga@infineon.com>"
+    - "Sebastian Prebeck <sebastian.prebeck@infineon.com>"
+    - "Robert Kunzelmann <robert.kunzelmann@infineon.com>"
+
+sources:
+  # Source files grouped in levels. Files in level 0 have no dependencies on files in this
+  # package. Files in level 1 only depend on files in level 0, files in level 2 on files in
+  # levels 1 and 0, etc. Files within a level are ordered alphabetically.
+  # Level 0
+  - src/Top_CounterReg.v
+  - src/Top_NextCsrLogic.v
+  - src/Top_PriorityErrorEncoding.v
+
+  # Level 1
+  - src/Top_SoC_CPUCore_safety_management_unit_trap1_group_process.v
+  - src/Top_SoC_CPUCore_safety_management_unit_trap2_group_process.v
+
+  # Level 2
+  - src/Top_SoC_CPUCore_safety_management_unit.v
