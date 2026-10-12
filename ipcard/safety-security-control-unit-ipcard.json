@@ -2,7 +2,7 @@
   "basicInfo": {
     "licensing": "Open-source (CERN-OHL-S-2.0)",
     "targetFpgaOrAsic": "FPGA/ASIC",
-    "designLanguage": "SystemVerilog"
+    "designLanguage": "Verilog"
   },
   "systemLevelFeatures": {
     "couplingType": "Tightly-coupled",
