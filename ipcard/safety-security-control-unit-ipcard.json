@@ -7,12 +7,12 @@
   "systemLevelFeatures": {
     "couplingType": "Tightly-coupled",
     "dataTypes": null,
-    "isa": "RV32I + Custom CSRs",
+    "isa": "RV32I_Zicsr + Custom CSRs",
     "peakOpsPerCycle": null,
-    "interfaces": null,
+    "interfaces": "RISCV CSRs",
     "supportedOperations": null,
-    "compilerSupport": null,
-    "externalMemoryRequired": null,
+    "compilerSupport": "Standard Compilers",
+    "externalMemoryRequired": "No",
     "cacheOrScratchpad": null
   },
   "architecture": {
@@ -33,21 +33,21 @@
   },
   "microarchitecture": {
     "parametrization": {
-      "parametricNumUnits": null,
-      "parametricConfig": "RTL from a parametrized generator"
+      "parametricNumUnits": "RTL from a parametrized generator",
+      "parametricConfig": "No"
     },
     "programmability": {
-      "programmableCores": null,
-      "isaExtension": null
+      "programmableCores": "Yes",
+      "isaExtension": "Zicsr + Custom CSRs"
     }
   },
   "software": {
     "compiler": {
-      "requiresSpecializedCompiler": null,
-      "supportedCompilers": null
+      "requiresSpecializedCompiler": "No",
+      "supportedCompilers": "Any RISC-V standard compiler, i.e GCC, LLVM, etc."
     },
     "hardwareAbstractionLayer": {
-      "halFunctions": null
+      "halFunctions": "No"
     },
     "highLevelApi": {
       "hasHighLevelApi": "No",
